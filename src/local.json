@@ -1,0 +1,40 @@
+{
+  "locale_list": [
+    {
+      "locate":"luz_guarita",
+      "status":"on"
+    },
+    {
+      "locate":"ar_guarita",
+      "status":"on"
+    },
+    {
+      "locate":"luz_estacionamento",
+      "status":"on"
+    },
+    {
+      "locate":"luz_galpao_externo",
+      "status":"on"
+    },
+    {
+      "locate":"luz_galpao_interno",
+      "status":"off"
+    },
+    {
+      "locate":"luz_escritorios",
+      "status":"off"
+    },
+    {
+      "locate":"ar_escritorios",
+      "status":"on"
+    },
+    {
+      "locate":"luz_sala_reunioes",
+      "status":"on"
+    },
+    {
+      "locate":"ar_sala_reunioes",
+      "status":"on"
+    }
+  ]
+}
