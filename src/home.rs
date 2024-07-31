@@ -1,11 +1,14 @@
 use std::fs::File;
 use std::io::Read;
 use std::net::UdpSocket;
+
 use iced::{Element, Length, Sandbox};
+use iced::Alignment::End;
 use iced::widget::{Button, Column, Container, Image, Row, Space, Text};
 use iced::widget::image::Handle;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+
+use crate::commands;
 
 #[derive(Default, Serialize, Deserialize, Debug)]
 pub(crate) struct LocaleList {
@@ -23,8 +26,8 @@ struct Locale {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    MakeSet(usize, String),
-    MakeGet
+    MakeSet(usize, String, String),
+    MakeGet(String)
 }
 
 impl Sandbox for LocaleList {
@@ -61,28 +64,21 @@ impl Sandbox for LocaleList {
     }
 
     fn update(&mut self, message: Message) {
+        let mut socket = UdpSocket::bind(("0.0.0.0", 11001)).unwrap();
+        socket.connect("192.168.0.4:11000").expect("TODO: panic message");
+        
         match message {
-            Message::MakeSet(index, action) => {
+            Message::MakeSet(index, action, locate) => {
                 if action.to_lowercase() == "on" {
+                    commands::set(&mut socket, action, locate);
                     self.bulbs[index] = on_bulb();
-
-                    let data = json!({
-                        "locate": "aaaaaaa",
-                        "status": action.to_lowercase(),
-                        "command": "set"
-                    });
-
-                    let mut socket = UdpSocket::bind(("0.0.0.0", 11001)).unwrap();
-                    socket.connect("192.168.0.4:11000").expect("TODO: panic message");
-
-                    send_json_to_server(&mut socket, data);
-
                 } else {
+                    commands::set(&mut socket, action, locate);
                     self.bulbs[index] = off_bulb();
                 }
             },
-            Message::MakeGet => {
-                println!("Fazendo get...");
+            Message::MakeGet(locate) => {
+                commands::get(&mut socket, locate)
             }
         }
     }
@@ -102,19 +98,19 @@ impl Sandbox for LocaleList {
                 .push(Space::with_width(Length::Fill))
                 .push(Button::new(
                     Text::new("On"),
-                ).on_press(Message::MakeSet(index, String::from("On"))))
+                ).on_press(Message::MakeSet(index, String::from("On"), item.locate.clone())))
                 .push(Button::new(
                     Text::new("Off"),
-                ).on_press(Message::MakeSet(index, String::from("Off"))))
+                ).on_press(Message::MakeSet(index, String::from("Off"), item.locate.clone())))
                 .push(Button::new(
                     Text::new("Update"),
-                ).on_press(Message::MakeGet))
+                ).on_press(Message::MakeGet(item.locate.clone())))
                 .padding(15);
 
             column = column.push(row);
         }
 
-        column = column.push(Button::new(Text::new("Update All")));
+        column = column.push(Button::new(Text::new("Update All"))).align_items(End);
 
         Container::new(column)
             .padding(10)
@@ -136,13 +132,4 @@ fn default_handler() -> Vec<Handle> {
     let handlers: Vec<Handle> = vec![];
 
     return handlers
-}
-
-fn send_json_to_server(connection: &mut UdpSocket, data: Value) {
-    let json_string = serde_json::to_string(&data).expect("Falha ao serializar JSON");
-    let metadata = json_string.len() as u64;
-    let bytes = json_string.as_bytes();
-    
-    connection.send(&metadata.to_le_bytes()).unwrap();
-    connection.send(bytes).unwrap();
 }

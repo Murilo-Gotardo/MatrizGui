@@ -2,6 +2,8 @@ use iced::{Sandbox, Settings, Size, window};
 use crate::home::LocaleList;
 
 mod home;
+mod commands;
+mod json_sender;
 
 fn main() {
     LocaleList::run(Settings {
