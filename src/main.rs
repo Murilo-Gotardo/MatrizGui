@@ -8,7 +8,7 @@ mod json_sender;
 fn main() {
     LocaleList::run(Settings {
         window: window::Settings {
-            size: Size::new(450.0, 600.0),
+            size: Size::new(450.0, 650.0),
             ..window::Settings::default()
         },
         ..Settings::default()

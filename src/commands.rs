@@ -5,6 +5,8 @@ use serde_json::json;
 use crate::json_sender::JsonSender;
 
 pub fn set(socket: &mut UdpSocket, value: String, locate: String) {
+    
+    // TODO: esse daqui ta apagando o arquivo inteiro, arruma!!
 
     let data = json!({
         "locate": locate,

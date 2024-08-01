@@ -1,10 +1,12 @@
 use std::fs::File;
 use std::io::Read;
-use std::net::UdpSocket;
+use std::net::{SocketAddrV4, UdpSocket};
+use std::os::unix::net::SocketAddr;
+use std::str::FromStr;
 
 use iced::{Element, Length, Sandbox};
 use iced::Alignment::End;
-use iced::widget::{Button, Column, Container, Image, Row, Space, Text};
+use iced::widget::{Button, Column, Container, Image, Row, Space, Text, TextInput};
 use iced::widget::image::Handle;
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +17,9 @@ pub(crate) struct LocaleList {
     locale_list: Vec<Locale>,
     #[serde(default = "default_handler")]
     #[serde(skip)]
-    bulbs: Vec<Handle>
+    bulbs: Vec<Handle>,
+    #[serde(skip)]
+    client_addr: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -27,7 +31,8 @@ struct Locale {
 #[derive(Debug, Clone)]
 pub enum Message {
     MakeSet(usize, String, String),
-    MakeGet(String)
+    MakeGet(String),
+    MakeServerIp(String),
 }
 
 impl Sandbox for LocaleList {
@@ -55,7 +60,8 @@ impl Sandbox for LocaleList {
 
         Self {
             locale_list: local_list,
-            bulbs: locale_bulbs
+            bulbs: locale_bulbs,
+            client_addr: "0.0.0.0:0".to_string()
         }
     }
 
@@ -65,7 +71,10 @@ impl Sandbox for LocaleList {
 
     fn update(&mut self, message: Message) {
         let mut socket = UdpSocket::bind(("0.0.0.0", 11001)).unwrap();
-        socket.connect("192.168.0.4:11000").expect("TODO: panic message");
+
+        if SocketAddrV4::from_str(&*self.client_addr).is_ok(){
+            socket.connect(self.client_addr.clone()).expect("TODO: panic message");
+        }
         
         match message {
             Message::MakeSet(index, action, locate) => {
@@ -79,12 +88,24 @@ impl Sandbox for LocaleList {
             },
             Message::MakeGet(locate) => {
                 commands::get(&mut socket, locate)
+            },
+            Message::MakeServerIp(ip) => {
+                self.client_addr = ip;
+                println!("{}", self.client_addr);
             }
         }
     }
 
     fn view(&self) -> Element<Message> {
         let mut column = Column::new();
+
+        let input = TextInput::new("Digite o ip do servidor e sua porta", &*self.client_addr)
+            .on_input(|value| Message::MakeServerIp(value))
+            .padding(15);
+        
+        // TODO: criar input de atualizacao periodica, utilizar thread separada
+        
+        column = column.push(input);
         
         for (index, item) in self.locale_list.iter().enumerate() {
 
@@ -131,5 +152,5 @@ fn on_bulb() -> Handle {
 fn default_handler() -> Vec<Handle> {
     let handlers: Vec<Handle> = vec![];
 
-    return handlers
+    handlers
 }
