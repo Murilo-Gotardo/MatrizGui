@@ -1,5 +1,4 @@
-use std::net::UdpSocket;
-
+use std::net::{SocketAddr, UdpSocket};
 use serde_json::Value;
 
 pub struct JsonSender {
@@ -7,10 +6,12 @@ pub struct JsonSender {
 }
 
 impl JsonSender {
-    pub(crate) fn send_json_to_server(connection: &mut UdpSocket, data: Value) {
+    pub fn send_json_to_server(connection: &UdpSocket, data: Value, server_addr: SocketAddr) {
         let json_string = serde_json::to_string(&data).expect("Falha ao serializar JSON");
         let metadata = json_string.len() as u64;
         let bytes = json_string.as_bytes();
+        
+        connection.connect(server_addr).expect("");
 
         connection.send(&metadata.to_le_bytes()).expect("TODO: panic message");
         connection.send(bytes).unwrap();

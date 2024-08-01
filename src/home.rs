@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-use std::net::{SocketAddrV4, UdpSocket};
-use std::os::unix::net::SocketAddr;
+use std::net::{SocketAddrV4, SocketAddr, UdpSocket};
 use std::str::FromStr;
 
 use iced::{Element, Length, Sandbox};
@@ -14,7 +13,7 @@ use crate::commands;
 
 #[derive(Default, Serialize, Deserialize, Debug)]
 pub(crate) struct LocaleList {
-    locale_list: Vec<Locale>,
+    pub(crate) locale_list: Vec<Locale>,
     #[serde(default = "default_handler")]
     #[serde(skip)]
     bulbs: Vec<Handle>,
@@ -22,16 +21,16 @@ pub(crate) struct LocaleList {
     client_addr: String
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Locale {
-    locate: String,
-    status: String,
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct Locale {
+    pub(crate) locate: String,
+    pub(crate) status: String,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    MakeSet(usize, String, String),
-    MakeGet(String),
+    MakeSet(usize, String, String, SocketAddr),
+    MakeGet(String, SocketAddr),
     MakeServerIp(String),
 }
 
@@ -77,17 +76,17 @@ impl Sandbox for LocaleList {
         }
         
         match message {
-            Message::MakeSet(index, action, locate) => {
+            Message::MakeSet(index, action, locate, addr) => {
                 if action.to_lowercase() == "on" {
-                    commands::set(&mut socket, action, locate);
+                    commands::set(&mut socket, action, locate, addr);
                     self.bulbs[index] = on_bulb();
                 } else {
-                    commands::set(&mut socket, action, locate);
+                    commands::set(&mut socket, action, locate, addr);
                     self.bulbs[index] = off_bulb();
                 }
             },
-            Message::MakeGet(locate) => {
-                commands::get(&mut socket, locate)
+            Message::MakeGet(locate, addr) => {
+                commands::get(&mut socket, locate, addr)
             },
             Message::MakeServerIp(ip) => {
                 self.client_addr = ip;
@@ -119,13 +118,13 @@ impl Sandbox for LocaleList {
                 .push(Space::with_width(Length::Fill))
                 .push(Button::new(
                     Text::new("On"),
-                ).on_press(Message::MakeSet(index, String::from("On"), item.locate.clone())))
+                ).on_press(Message::MakeSet(index, String::from("On"), item.locate.clone(), self.client_addr.clone().parse().unwrap())))
                 .push(Button::new(
                     Text::new("Off"),
-                ).on_press(Message::MakeSet(index, String::from("Off"), item.locate.clone())))
+                ).on_press(Message::MakeSet(index, String::from("Off"), item.locate.clone(), self.client_addr.clone().parse().unwrap())))
                 .push(Button::new(
                     Text::new("Update"),
-                ).on_press(Message::MakeGet(item.locate.clone())))
+                ).on_press(Message::MakeGet(item.locate.clone(), self.client_addr.clone().parse().unwrap())))
                 .padding(15);
 
             column = column.push(row);
