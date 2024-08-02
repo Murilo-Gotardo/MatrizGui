@@ -10,7 +10,7 @@
     },
     {
       "locate": "luz_estacionamento",
-      "status": "on"
+      "status": "off"
     },
     {
       "locate": "luz_galpao_externo",
@@ -18,7 +18,7 @@
     },
     {
       "locate": "luz_galpao_interno",
-      "status": "off"
+      "status": "on"
     },
     {
       "locate": "luz_escritorios",

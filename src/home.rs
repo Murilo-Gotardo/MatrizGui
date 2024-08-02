@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-use std::net::{SocketAddrV4, SocketAddr, UdpSocket};
+use std::net::{SocketAddr, SocketAddrV4, UdpSocket};
 use std::str::FromStr;
 
 use iced::{Element, Length, Sandbox};
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::commands;
 
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct LocaleList {
     pub(crate) locale_list: Vec<Locale>,
     #[serde(default = "default_handler")]
@@ -19,6 +19,15 @@ pub(crate) struct LocaleList {
     bulbs: Vec<Handle>,
     #[serde(skip)]
     client_addr: String
+}
+
+impl IntoIterator for LocaleList {
+    type Item = Locale;
+    type IntoIter = std::vec::IntoIter<Locale>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.locale_list.into_iter()
+    }
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
@@ -30,7 +39,8 @@ pub struct Locale {
 #[derive(Debug, Clone)]
 pub enum Message {
     MakeSet(usize, String, String, SocketAddr),
-    MakeGet(String, SocketAddr),
+    MakeGet(usize, String, SocketAddr),
+    MakeGetAll(SocketAddr),
     MakeServerIp(String),
 }
 
@@ -74,23 +84,35 @@ impl Sandbox for LocaleList {
         if SocketAddrV4::from_str(&*self.client_addr).is_ok(){
             socket.connect(self.client_addr.clone()).expect("TODO: panic message");
         }
+
+        let mut change_bulb_state = |action: &str, index: usize| {
+            if action.to_lowercase() == "on" {
+                self.bulbs[index] = on_bulb();
+            } else {
+                self.bulbs[index] = off_bulb();
+            }
+        };
         
         match message {
             Message::MakeSet(index, action, locate, addr) => {
-                if action.to_lowercase() == "on" {
-                    commands::set(&mut socket, action, locate, addr);
-                    self.bulbs[index] = on_bulb();
-                } else {
-                    commands::set(&mut socket, action, locate, addr);
-                    self.bulbs[index] = off_bulb();
-                }
+                commands::set(&mut socket, action.clone(), locate, addr);
+                change_bulb_state(&*action.to_lowercase(), index);
             },
-            Message::MakeGet(locate, addr) => {
-                commands::get(&mut socket, locate, addr)
+            Message::MakeGet(index, locate, addr) => {
+                let action_received = commands::get(&mut socket, locate, addr);
+                change_bulb_state(&*action_received, index);
+            },
+            Message::MakeGetAll(addr) => {
+                let result = commands::get_all(&mut socket, addr);
+                
+                for (i, locale) in result.locale_list.iter().enumerate() {
+                    if let Some(locale) = result.locale_list.iter().find(|&r| r.locate == locale.locate) {
+                        change_bulb_state(locale.status.as_str(), i);
+                    }
+                }
             },
             Message::MakeServerIp(ip) => {
                 self.client_addr = ip;
-                println!("{}", self.client_addr);
             }
         }
     }
@@ -107,7 +129,6 @@ impl Sandbox for LocaleList {
         column = column.push(input);
         
         for (index, item) in self.locale_list.iter().enumerate() {
-
             let text = Text::new(&item.locate);
             let bulb = self.bulbs[index].clone();
 
@@ -124,13 +145,15 @@ impl Sandbox for LocaleList {
                 ).on_press(Message::MakeSet(index, String::from("Off"), item.locate.clone(), self.client_addr.clone().parse().unwrap())))
                 .push(Button::new(
                     Text::new("Update"),
-                ).on_press(Message::MakeGet(item.locate.clone(), self.client_addr.clone().parse().unwrap())))
+                ).on_press(Message::MakeGet(index, item.locate.clone(), self.client_addr.clone().parse().unwrap())))
                 .padding(15);
 
             column = column.push(row);
         }
 
-        column = column.push(Button::new(Text::new("Update All"))).align_items(End);
+        column = column.push(Button::new(Text::new("Update All"))
+            .on_press(Message::MakeGetAll(self.client_addr.clone().parse().unwrap())))
+            .align_items(End);
 
         Container::new(column)
             .padding(10)
