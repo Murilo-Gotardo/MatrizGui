@@ -81,7 +81,7 @@ impl Sandbox for LocaleList {
     fn update(&mut self, message: Message) {
         let mut socket = UdpSocket::bind(("0.0.0.0", 11001)).unwrap();
 
-        if SocketAddrV4::from_str(&*self.client_addr).is_ok(){
+        if SocketAddrV4::from_str(&*self.client_addr).is_ok() && self.client_addr != "0.0.0.0:0"{
             socket.connect(self.client_addr.clone()).expect("TODO: panic message");
         }
 
