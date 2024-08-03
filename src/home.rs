@@ -146,12 +146,11 @@ impl Sandbox for LocaleList {
                 *self.receiver.lock().unwrap() = Some(rx);
                 
                 thread::spawn(move || {
-                    let mut bulbs_lock = bulbs_clone.lock().unwrap();
                     loop {
                         if let Some(ref receiver) = *receiver_clone.lock().unwrap() {
                             if let Ok(()) = receiver.try_recv() {
                                 let result = result.lock().unwrap();
-                                
+                                let mut bulbs_lock = bulbs_clone.lock().unwrap();
                                 for (i, locale) in result.locale_list.iter().enumerate() {
                                     if let Some(locale) = result.locale_list.iter().find(|&r| r.locate == locale.locate) {
                                         if locale.status.as_str() == "on" {
@@ -160,8 +159,8 @@ impl Sandbox for LocaleList {
                                             bulbs_lock[i] = off_bulb();
                                         }
                                     }
+                                    break;
                                 }
-                                break;
                             }
                         }
                         sleep(Duration::from_millis(100));
