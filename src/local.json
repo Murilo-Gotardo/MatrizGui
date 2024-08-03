@@ -6,7 +6,7 @@
     },
     {
       "locate": "ar_guarita",
-      "status": "off"
+      "status": "on"
     },
     {
       "locate": "luz_estacionamento",
@@ -30,7 +30,7 @@
     },
     {
       "locate": "luz_sala_reunioes",
-      "status": "off"
+      "status": "on"
     },
     {
       "locate": "ar_sala_reunioes",

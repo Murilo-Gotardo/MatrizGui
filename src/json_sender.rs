@@ -17,7 +17,7 @@ impl JsonSender {
         connection.send(bytes).unwrap();
     }
     
-    pub fn receive_json_from_server(connection: &mut UdpSocket) -> String {
+    pub fn receive_json_from_server(connection: &UdpSocket) -> String {
         let mut buffer = [0; 8];
         connection.recv_from(&mut buffer).expect("");
         let json_size = u64::from_le_bytes(buffer);

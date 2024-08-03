@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
+use std::sync::MutexGuard;
 use serde_json::json;
 use crate::home::{Locale, LocaleList};
 use crate::json_sender::JsonSender;
 
-pub fn set(socket: &mut UdpSocket, value: String, locate: String, addr: SocketAddr) {
+pub fn set(socket: &UdpSocket, value: String, locate: String, addr: SocketAddr) {
 
     let data = json!({
         "locate": locate,
@@ -29,7 +30,7 @@ pub fn set(socket: &mut UdpSocket, value: String, locate: String, addr: SocketAd
     file.write_all(updated_data.as_bytes()).unwrap();
 }
 
-pub fn get(socket: &mut UdpSocket, locate: String, addr: SocketAddr) -> String {
+pub fn get(socket: &UdpSocket, locate: String, addr: SocketAddr) -> String {
     let data = json!({
         "locate": locate,
         "command": "get"
@@ -52,13 +53,13 @@ pub fn get(socket: &mut UdpSocket, locate: String, addr: SocketAddr) -> String {
     updated_locale.status
 }
 
-pub fn get_all(socket: &mut UdpSocket, addr: SocketAddr) -> LocaleList {
+pub fn get_all(socket: MutexGuard<UdpSocket>, addr: SocketAddr) -> LocaleList {
     let data = json!({
         "command": "get_all"
     });
 
-    JsonSender::send_json_to_server(socket, data, addr);
-    let json = JsonSender::receive_json_from_server(socket);
+    JsonSender::send_json_to_server(&socket, data, addr);
+    let json = JsonSender::receive_json_from_server(&socket);
 
     let mut file = File::open("src/local.json").unwrap();
     let mut data = String::new();
