@@ -1,9 +1,8 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
-use std::sync::MutexGuard;
 use serde_json::json;
-use crate::home::{Locale, LocaleList};
+use crate::home::{Locale, LocaleList, SOCKET};
 use crate::json_sender::JsonSender;
 
 pub fn set(socket: &UdpSocket, value: String, locate: String, addr: SocketAddr) {
@@ -30,7 +29,7 @@ pub fn set(socket: &UdpSocket, value: String, locate: String, addr: SocketAddr) 
     file.write_all(updated_data.as_bytes()).unwrap();
 }
 
-pub fn get(socket: &UdpSocket, locate: String, addr: SocketAddr) -> String {
+pub fn get(socket: &SOCKET, locate: String, addr: SocketAddr) -> String {
     let data = json!({
         "locate": locate,
         "command": "get"
@@ -47,13 +46,13 @@ pub fn get(socket: &UdpSocket, locate: String, addr: SocketAddr) -> String {
     let updated_data = serde_json::to_string_pretty(&locales).expect("Erro ao serializar JSON");
     let mut file = File::create("src/local.json").unwrap();
     file.write_all(updated_data.as_bytes()).unwrap();
-    
+
     let locale: Locale = serde_json::from_str(&json).expect("JSON inválido");
     let updated_locale = update_json_with_received_locale(locale, &mut locales);
     updated_locale.status
 }
 
-pub fn get_all(socket: MutexGuard<UdpSocket>, addr: SocketAddr) -> LocaleList {
+pub fn get_all(socket: &SOCKET, addr: SocketAddr) -> LocaleList {
     let data = json!({
         "command": "get_all"
     });
@@ -79,7 +78,7 @@ pub fn get_all(socket: MutexGuard<UdpSocket>, addr: SocketAddr) -> LocaleList {
     let updated_data = serde_json::to_string_pretty(&locales).expect("Erro ao serializar JSON");
     let mut file = File::create("src/local.json").unwrap();
     file.write_all(updated_data.as_bytes()).unwrap();
-    
+
     locales
 }
 
@@ -91,7 +90,7 @@ fn update_json_with_received_locale(received_locale : Locale, locales: &mut Loca
             return locale.clone();
         }
     }
-    
+
     return Locale::default();
 }
 
